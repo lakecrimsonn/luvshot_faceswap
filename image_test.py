@@ -13,6 +13,8 @@ from utils.prepare_data import LandmarkModel
 from gfpgan import GFPGANer
 from PIL import Image
 
+import datetime
+
 def get_id_emb(id_net, id_img_path):
     id_img = cv2.imread(id_img_path)
 
@@ -111,7 +113,11 @@ def gfpgan_gogo(img):
     base_path = './results_gfpgan/'
     result_img_np = np.array(result_img)
     result_img_rgb = result_img_np[:, :, ::-1]
-    cv2.imwrite(base_path + 'gfpgan_img.png', result_img_rgb)
+
+    suffix = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
+    fileName = suffix + '.png'
+
+    cv2.imwrite(base_path + fileName, result_img_rgb)
 
 
 if __name__ == '__main__':
