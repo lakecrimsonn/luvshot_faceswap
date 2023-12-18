@@ -1,3 +1,7 @@
+### how to use it
+- python image_test.py --target_img_path data/background.png --source_img_path data/origin.jpg
+
+
 ### [MobileFaceSwap: A Lightweight Framework for Video Face Swapping (AAAI 2022)](https://arxiv.org/abs/2201.03808)
 --- 
 

@@ -13,17 +13,6 @@ from utils.prepare_data import LandmarkModel
 from gfpgan import GFPGANer
 from PIL import Image
 
-def get_id_emb_from_image(id_net, id_img):
-    id_img = cv2.resize(id_img, (112, 112))
-    id_img = cv2paddle(id_img)
-    mean = paddle.to_tensor([[0.485, 0.456, 0.406]]).reshape((1, 3, 1, 1))
-    std = paddle.to_tensor([[0.229, 0.224, 0.225]]).reshape((1, 3, 1, 1))
-    id_img = (id_img - mean) / std
-    id_emb, id_feature = id_net(id_img)
-    id_emb = l2_norm(id_emb)
-
-    return id_emb, id_feature
-
 def image_test_multi_face(args, source_aligned_images, target_aligned_images):
     #paddle.set_device("gpu" if args.use_gpu else 'cpu')
     paddle.set_device("cpu" if args.use_gpu else 'cpu')
@@ -73,6 +62,17 @@ def image_test_multi_face(args, source_aligned_images, target_aligned_images):
     result_img_path = os.path.join(args.output_dir, os.path.basename(target_name.format(idx)))
     gfpgan_gogo(result_img_path)
 
+def get_id_emb_from_image(id_net, id_img):
+    id_img = cv2.resize(id_img, (112, 112))
+    id_img = cv2paddle(id_img)
+    mean = paddle.to_tensor([[0.485, 0.456, 0.406]]).reshape((1, 3, 1, 1))
+    std = paddle.to_tensor([[0.229, 0.224, 0.225]]).reshape((1, 3, 1, 1))
+    id_img = (id_img - mean) / std
+    id_emb, id_feature = id_net(id_img)
+    id_emb = l2_norm(id_emb)
+
+    return id_emb, id_feature
+
 def faces_align(landmarkModel, image_path, image_size=224):
     aligned_imgs =[]
     if os.path.isfile(image_path):
@@ -109,7 +109,7 @@ def gfpgan_gogo(img):
         original_img, restored_img, 1
     )
 
-    result_img.show()
+    # result_img.show()
     base_path = './results_gfpgan/'
     result_img_np = np.array(result_img)
     result_img_rgb = result_img_np[:, :, ::-1]

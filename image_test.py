@@ -15,21 +15,6 @@ from PIL import Image
 
 import datetime
 
-def get_id_emb(id_net, id_img_path):
-    id_img = cv2.imread(id_img_path)
-
-    id_img = cv2.resize(id_img, (112, 112))
-    id_img = cv2paddle(id_img)
-    mean = paddle.to_tensor([[0.485, 0.456, 0.406]]).reshape((1, 3, 1, 1))
-    std = paddle.to_tensor([[0.229, 0.224, 0.225]]).reshape((1, 3, 1, 1))
-    id_img = (id_img - mean) / std
-
-    id_emb, id_feature = id_net(id_img)
-    id_emb = l2_norm(id_emb)
-
-    return id_emb, id_feature
-
-
 def image_test(args):
     # paddle.set_device("gpu" if args.use_gpu else 'cpu')
     paddle.set_device("cpu" if args.use_gpu else 'cpu')
@@ -58,7 +43,6 @@ def image_test(args):
         base_path = img_path.replace('.png', '').replace('.jpg', '').replace('.jpeg', '')
         att_img = cv2.imread(base_path + '_aligned.png')
         att_img = cv2paddle(att_img)
-        import time
         
         res, mask = faceswap_model(att_img)
         res = paddle2cv(res)
@@ -68,11 +52,22 @@ def image_test(args):
             mask = np.transpose(mask[0].numpy(), (1, 2, 0))
             res = dealign(res, origin_att_img, back_matrix, mask)
         cv2.imwrite(os.path.join(args.output_dir, os.path.basename(img_path)), res)
-        # print(res)
         res_img_path = os.path.join(args.output_dir, os.path.basename(img_path))
-        # print(res_img_path)
         gfpgan_gogo(res_img_path)
 
+def get_id_emb(id_net, id_img_path):
+    id_img = cv2.imread(id_img_path)
+
+    id_img = cv2.resize(id_img, (112, 112))
+    id_img = cv2paddle(id_img)
+    mean = paddle.to_tensor([[0.485, 0.456, 0.406]]).reshape((1, 3, 1, 1))
+    std = paddle.to_tensor([[0.229, 0.224, 0.225]]).reshape((1, 3, 1, 1))
+    id_img = (id_img - mean) / std
+
+    id_emb, id_feature = id_net(id_img)
+    id_emb = l2_norm(id_emb)
+
+    return id_emb, id_feature
 
 def face_align(landmarkModel, image_path, merge_result=False, image_size=224): #224
     if os.path.isfile(image_path):
@@ -109,8 +104,8 @@ def gfpgan_gogo(img):
         original_img, restored_img, 1
     )
 
-    result_img.show()
-    base_path = './results_gfpgan/'
+    # result_img.show()
+    base_path = './results/'
     result_img_np = np.array(result_img)
     result_img_rgb = result_img_np[:, :, ::-1]
 
