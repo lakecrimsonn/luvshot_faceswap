@@ -14,3 +14,4 @@ __pycache__/
 gfpgan/
 GFPGANv1.4.pth
 results_gfpgan/
+combinated_image/

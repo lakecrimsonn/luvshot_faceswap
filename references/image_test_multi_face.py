@@ -13,6 +13,10 @@ from utils.prepare_data import LandmarkModel
 from gfpgan import GFPGANer
 from PIL import Image
 
+from insightface.app import FaceAnalysis
+
+import datetime
+
 def image_test_multi_face(args, source_aligned_images, target_aligned_images):
     #paddle.set_device("gpu" if args.use_gpu else 'cpu')
     paddle.set_device("cpu" if args.use_gpu else 'cpu')
@@ -39,28 +43,36 @@ def image_test_multi_face(args, source_aligned_images, target_aligned_images):
     # print('target_aligned_images : ',target_aligned_images)
 
     for idx, target_aligned_image in enumerate(target_aligned_images):
+        
         id_emb, id_feature = get_id_emb_from_image(id_net, source_aligned_images[idx % len(source_aligned_images)][0])
         faceswap_model.set_model_param(id_emb, id_feature, model_weight=weight)
         faceswap_model.eval()
-        #print(target_aligned_image.shape)
+        # print(target_aligned_image.shape)
+
+        # genderModel = FaceAnalysis(name='buffalo_l')
+        # genderModel.prepare(ctx_id=0, det_size=(640, 640))
+        # faces = genderModel.get(target_aligned_image[0])
+        # # cv2.imshow('img', target_aligned_image)
+        # # cv2.waitKey(0)
+        # print(faces)
 
         att_img = cv2paddle(target_aligned_image[0])
+
         #import time
         #start = time.perf_counter()
 
         res, mask = faceswap_model(att_img)
         #print('process time :{}', time.perf_counter() - start)
         res = paddle2cv(res)
-
         #dest[landmarks[idx][0]:landmarks[idx][1],:] =
 
         back_matrix = target_aligned_images[idx % len(target_aligned_images)][1]
         mask = np.transpose(mask[0].numpy(), (1, 2, 0))
         origin_att_img = dealign(res, origin_att_img, back_matrix, mask)
-
+        
     cv2.imwrite(os.path.join(args.output_dir, os.path.basename(target_name.format(idx))), origin_att_img)
     result_img_path = os.path.join(args.output_dir, os.path.basename(target_name.format(idx)))
-    gfpgan_gogo(result_img_path)
+    # gfpgan_gogo(result_img_path)
 
 def get_id_emb_from_image(id_net, id_img):
     id_img = cv2.resize(id_img, (112, 112))
@@ -85,7 +97,6 @@ def faces_align(landmarkModel, image_path, image_size=224):
         # print('img_path : ', path)
         img = cv2.imread(path)
         landmarks = landmarkModel.gets(img)
-        # print('landmark : ', landmarks)
         for landmark in landmarks:
             if landmark is not None:
                 aligned_img, back_matrix = align_img(img, landmark, image_size)
@@ -110,16 +121,20 @@ def gfpgan_gogo(img):
     )
 
     # result_img.show()
-    base_path = './results_gfpgan/'
+    base_path = './results/'
     result_img_np = np.array(result_img)
     result_img_rgb = result_img_np[:, :, ::-1]
-    cv2.imwrite(base_path + 'gfpgan_img.png', result_img_rgb)
 
+    suffix = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
+    fileName = suffix + '.png'
+
+    cv2.imwrite(base_path + fileName, result_img_rgb)
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="MobileFaceSwap Test")
     parser.add_argument('--source_img_path', type=str, help='path to the source image')
+    parser.add_argument('--source_img_path2', type=str, help='path to the source image')
     parser.add_argument('--target_img_path', type=str, help='path to the target images')
     parser.add_argument('--output_dir', type=str, default='results', help='path to the output dirs')
     parser.add_argument('--image_size', type=int, default=224,help='size of the test images (224 SimSwap | 256 FaceShifter)')
@@ -132,7 +147,17 @@ if __name__ == '__main__':
     if args.need_align:
         landmarkModel = LandmarkModel(name='landmarks')
         landmarkModel.prepare(ctx_id= 0, det_thresh=0.6, det_size=(640,640))
+
+        face = landmarkModel.get_faces(args.target_img_path)
+        print(face)
+
         source_aligned_images = faces_align(landmarkModel, args.source_img_path)
         target_aligned_images = faces_align(landmarkModel, args.target_img_path, args.image_size)
-    os.makedirs(args.output_dir, exist_ok=True)
-    image_test_multi_face(args, source_aligned_images, target_aligned_images)
+
+        # for idx, target_aligned_image in enumerate(target_aligned_images):
+        #     face = landmarkModel.get_faces(target_aligned_image[0])
+            
+
+        # source_aligned_images2 = faces_align(landmarkModel, args.source_img_path2)
+        # os.makedirs(args.output_dir, exist_ok=True)
+        # image_test_multi_face(args, source_aligned_images, target_aligned_images)
